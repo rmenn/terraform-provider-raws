@@ -71,12 +71,39 @@ func resourceRawsVpcCreate(d *schema.ResourceData, meta interface{}) error {
 	return resourceRawsVpcUpdate(d, meta)
 }
 
-func resourceRawsVpcRead(d *schema.ResourceData, m interface{}) error {
+func resourceRawsVpcRead(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	vpcRaw, _, err := VPCStateRefreshFunc(ec2conn, d.Id())()
+	if err != nil {
+		return err
+	}
+	if vpcRaw == nil {
+		return nil
+	}
+	vpc := vpcRaw.(*ec2.VPC)
+	vpcid := d.Id()
+	d.Set("cidr_block", vpc.CIDRBlock)
+	d.Set("instance_tenancy", vpc.InstanceTenancy)
+	createOpts := &ec2.DescribeVPCAttributeRequest{
+		VPCID: &vpcid,
+	}
+	resp, err := ec2conn.DescribeVPCAttribute(createOpts)
+	d.Set("enable_dns_support", resp.EnableDNSHostnames)
+	d.Set("enable_dns_hostnames", resp.EnableDNSSupport)
 	return nil
 }
 
-func resourceRawsVpcUpdate(d *schema.ResourceData, m interface{}) error {
-	return nil
+func resourceRawsVpcUpdate(d *schema.ResourceData, meta interface{}) error {
+	//ec2conn := meta.(*AWSClient).codaConn
+	d.Partial(true)
+	if d.HasChange("enable_dns_hostnames") {
+		log.Printf("[INFO] Modifying enable_dns_hostnames vpc attribute for %s: %#v", d.Id(), d.Get("enable_dns_hostnames"))
+	}
+	if d.HasChange("enable_dns_support") {
+		log.Printf("[INFO] Modifying enable_dns_hostnames vpc attribute for %s: %#v", d.Id(), d.Get("enable_dns_support"))
+	}
+	d.Partial(false)
+	return resourceRawsVpcRead(d, meta)
 }
 
 func resourceRawsVpcDelete(d *schema.ResourceData, meta interface{}) error {
