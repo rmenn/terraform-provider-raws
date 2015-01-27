@@ -30,6 +30,16 @@ func resourceRawsVpc() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
+			"enable_dns_support": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
+			"enable_dns_hostnames": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -96,8 +106,12 @@ func resourceRawsVpcRead(d *schema.ResourceData, meta interface{}) error {
 func resourceRawsVpcUpdate(d *schema.ResourceData, meta interface{}) error {
 	//ec2conn := meta.(*AWSClient).codaConn
 	d.Partial(true)
+	vpcid := d.Id()
 	if d.HasChange("enable_dns_hostnames") {
-		log.Printf("[INFO] Modifying enable_dns_hostnames vpc attribute for %s: %#v", d.Id(), d.Get("enable_dns_hostnames"))
+		createOpts := &ec2.ModifyVPCAttributeRequest{
+			VPCID: &vpcid,
+		}
+		log.Printf("[INFO] Modifying enable_dns_hostnames vpc attribute for %s: %#v", d.Id(), createOpts)
 	}
 	if d.HasChange("enable_dns_support") {
 		log.Printf("[INFO] Modifying enable_dns_hostnames vpc attribute for %s: %#v", d.Id(), d.Get("enable_dns_support"))
