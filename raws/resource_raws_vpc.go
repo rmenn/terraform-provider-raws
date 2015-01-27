@@ -61,10 +61,10 @@ func resourceRawsVpcCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Error creating VPC: %s", err)
 	}
 	vpc := vpcResp.VPC
-	log.Printf("[INFO] VPC ID: %s", vpc.VPCID)
 	d.SetId(*vpc.VPCID)
 	d.Partial(true)
 	d.SetPartial("cidr_block")
+	log.Printf("[INFO] VPC ID: %s", d.Id())
 	// Wait for the VPC to become available
 	log.Printf("[DEBUG] Waiting for VPC (%s) to become available", d.Id())
 	stateConf := &resource.StateChangeConf{
