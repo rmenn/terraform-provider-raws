@@ -37,7 +37,10 @@ func resourceRawsVpc() *schema.Resource {
 func resourceRawsVpcCreate(d *schema.ResourceData, meta interface{}) error {
 	ec2conn := meta.(*AWSClient).codaConn
 	cidr := d.Get("cidr_block").(string)
-	instance_tenancy := d.Get("instance_tenancy").(string)
+	instance_tenancy := "default"
+	if v := d.Get("instance_tenancy"); v != nil {
+		instance_tenancy = v.(string)
+	}
 	createOpts := &ec2.CreateVPCRequest{
 		CIDRBlock:       &cidr,
 		InstanceTenancy: &instance_tenancy,
