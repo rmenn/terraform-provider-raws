@@ -4,6 +4,8 @@ Uses [aws-go], currently supports
 * VPC
 * Subnets
 * Route Tables ( WIP )
+* Route Table Association ( WIP )
+* Security Group ( Pending )
 
 Supposed to work with all operations that is supported by TF on VPC and Subnets
 ```
