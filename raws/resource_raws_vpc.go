@@ -104,17 +104,51 @@ func resourceRawsVpcRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceRawsVpcUpdate(d *schema.ResourceData, meta interface{}) error {
-	//ec2conn := meta.(*AWSClient).codaConn
+	ec2conn := meta.(*AWSClient).codaConn
 	d.Partial(true)
+	modify := false
 	vpcid := d.Id()
 	if d.HasChange("enable_dns_hostnames") {
 		createOpts := &ec2.ModifyVPCAttributeRequest{
 			VPCID: &vpcid,
 		}
-		log.Printf("[INFO] Modifying enable_dns_hostnames vpc attribute for %s: %#v", d.Id(), createOpts)
+		if v, ok := d.GetOk("enable_dns_hostnames"); ok {
+			val := v.(bool)
+			createOpts.EnableDNSHostnames = &ec2.AttributeBooleanValue{
+				Value: &val,
+			}
+			modify = true
+		}
+		if modify {
+			modify = false
+			log.Printf("[INFO] Modifying enable_dns_hostnames vpc attribute for %s: %#v", d.Id(), createOpts)
+			if err := ec2conn.ModifyVPCAttribute(createOpts); err != nil {
+				return err
+			} else {
+				d.SetPartial("enable_dns_hostnames")
+			}
+		}
 	}
 	if d.HasChange("enable_dns_support") {
-		log.Printf("[INFO] Modifying enable_dns_hostnames vpc attribute for %s: %#v", d.Id(), d.Get("enable_dns_support"))
+		createOpts := &ec2.ModifyVPCAttributeRequest{
+			VPCID: &vpcid,
+		}
+		if v, ok := d.GetOk("enable_dns_support"); ok {
+			val := v.(bool)
+			createOpts.EnableDNSSupport = &ec2.AttributeBooleanValue{
+				Value: &val,
+			}
+			modify = true
+		}
+		if modify {
+			modify = false
+			log.Printf("[INFO] Modifying enable_dns_hostnames vpc attribute for %s: %#v", d.Id(), createOpts)
+			if err := ec2conn.ModifyVPCAttribute(createOpts); err != nil {
+				return err
+			} else {
+				d.SetPartial("enable_dns_support")
+			}
+		}
 	}
 	d.Partial(false)
 	return resourceRawsVpcRead(d, meta)
