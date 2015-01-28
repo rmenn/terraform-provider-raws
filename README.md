@@ -1,8 +1,10 @@
 # terraform-provider-raws
 terraform-provider-raws
 Uses [aws-go], currently supports 
-* vpc operations ( incomplete ) 
+* VPC
 * Subnets
+
+Supposed to work with all operations that is supported by TF on VPC and Subnets
 ```
 provider "raws" {
     access_key = "XXXX"
