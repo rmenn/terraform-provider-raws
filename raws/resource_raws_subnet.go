@@ -37,6 +37,11 @@ func resourceRawsSubnet() *schema.Resource {
 				Computed: true,
 				ForceNew: true,
 			},
+
+			"map_public_ip_on_launch": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -72,11 +77,45 @@ func resourceRawsSubnetCreate(d *schema.ResourceData, meta interface{}) error {
 	return resourceRawsSubnetUpdate(d, meta)
 }
 
-func resourceRawsSubnetRead(d *schema.ResourceData, m interface{}) error {
+func resourceRawsSubnetRead(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	subnetRaw, _, err := SubnetStateRefreshFunc(ec2conn, d.Id())()
+	if err != nil {
+		return err
+	}
+	if subnetRaw == nil {
+		return nil
+	}
+	subnet := subnetRaw.(*ec2.Subnet)
+	d.Set("availability_zone", subnet.AvailabilityZone)
+	d.Set("vpc_id", subnet.VPCID)
+	d.Set("cidr_block", subnet.CIDRBlock)
 	return nil
 }
 
-func resourceRawsSubnetUpdate(d *schema.ResourceData, m interface{}) error {
+func resourceRawsSubnetUpdate(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	d.Partial(true)
+	modify := false
+	subnetId := d.Id()
+	if d.HasChange("map_public_ip_on_launch") {
+		ModSubnetAttrOpts := &ec2.ModifySubnetAttributeRequest{
+			SubnetID: &subnetId,
+		}
+		if v, ok := d.GetOk("source_dest_check"); ok {
+			val := v.(bool)
+			ModSubnetAttrOpts.MapPublicIPOnLaunch = &ec2.AttributeBooleanValue{
+				Value: &val,
+			}
+			modify = true
+		}
+		if modify {
+			log.Printf("[INFO] Modifing instance %s: %#v", d.Id(), ModSubnetAttrOpts)
+			if err := ec2conn.ModifySubnetAttribute(ModSubnetAttrOpts); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
