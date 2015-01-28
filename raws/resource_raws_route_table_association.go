@@ -48,7 +48,28 @@ func resourceRawsRouteTableAssociationCreate(d *schema.ResourceData, meta interf
 	return nil
 }
 
-func resourceRawsRouteTableAssociationRead(d *schema.ResourceData, m interface{}) error {
+func resourceRawsRouteTableAssociationRead(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	rtRaw, _, err := resourceAwsRouteTableStateRefreshFunc(ec2conn, d.Get("route_table_id").(string))()
+	if err != nil {
+		return err
+	}
+	if rtRaw == nil {
+		return nil
+	}
+	rt := rtRaw.(*ec2.RouteTable)
+	found := false
+	routeId := d.Id()
+	for _, a := range rt.Associations {
+		if a.RouteTableAssociationID == &routeId {
+			found = true
+			d.Set("subnet_id", a.SubnetID)
+			break
+		}
+	}
+	if !found {
+		d.SetId("")
+	}
 	return nil
 }
 
