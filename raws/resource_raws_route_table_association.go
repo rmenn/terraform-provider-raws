@@ -1,9 +1,11 @@
 package raws
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	codaws "github.com/stripe/aws-go/aws"
 	"github.com/stripe/aws-go/gen/ec2"
 )
 
@@ -54,6 +56,20 @@ func resourceRawsRouteTableAssociationUpdate(d *schema.ResourceData, m interface
 	return nil
 }
 
-func resourceRawsRouteTableAssociationDelete(d *schema.ResourceData, m interface{}) error {
+func resourceRawsRouteTableAssociationDelete(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	AccocId := d.Id()
+	log.Printf("[INFO] Deleting route table association: %s", d.Id())
+	DisaccocRouteTableOpts := &ec2.DisassociateRouteTableRequest{
+		AssociationID: &AccocId,
+	}
+	if err := ec2conn.DisassociateRouteTable(DisaccocRouteTableOpts); err != nil {
+		ec2err, ok := err.(*codaws.APIError)
+		if ok && ec2err.Code == "InvalidVpcID.NotFound" {
+			return nil
+		}
+
+		return fmt.Errorf("Error deleting Route Association: %s", err)
+	}
 	return nil
 }
