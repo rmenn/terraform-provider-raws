@@ -1,7 +1,12 @@
 package raws
 
 import (
+	"log"
+
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
+	codaws "github.com/stripe/aws-go/aws"
+	"github.com/stripe/aws-go/gen/ec2"
 )
 
 func resourceRawsRouteTable() *schema.Resource {
@@ -58,4 +63,28 @@ func resourceRawsRouteTableUpdate(d *schema.ResourceData, m interface{}) error {
 
 func resourceRawsRouteTableDelete(d *schema.ResourceData, m interface{}) error {
 	return nil
+}
+
+func resourceAwsRouteTableStateRefreshFunc(conn *ec2.EC2, id string) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		DescribeRouteOpts := &ec2.DescribeRouteTablesRequest{
+			RouteTableIDs: []string{id},
+		}
+		resp, err := conn.DescribeRouteTables(DescribeRouteOpts)
+		if err != nil {
+			if ec2err, ok := err.(*codaws.APIError); ok && ec2err.Code == "InvalidRouteTableID.NotFound" {
+				resp = nil
+			} else {
+				log.Printf("Error on Route Table State Refresh: %s", err)
+				return nil, "", err
+			}
+		}
+
+		if resp == nil {
+			return nil, "", nil
+		}
+
+		route := &resp.RouteTables[0]
+		return route, "ready", nil
+	}
 }
