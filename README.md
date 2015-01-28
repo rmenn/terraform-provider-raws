@@ -3,6 +3,7 @@ terraform-provider-raws
 Uses [aws-go], currently supports 
 * VPC
 * Subnets
+* Route Tables ( WIP )
 
 Supposed to work with all operations that is supported by TF on VPC and Subnets
 ```

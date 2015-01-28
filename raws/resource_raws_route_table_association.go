@@ -1,7 +1,10 @@
 package raws
 
 import (
+	"log"
+
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/stripe/aws-go/gen/ec2"
 )
 
 func resourceRawsRouteTableAssociation() *schema.Resource {
@@ -26,7 +29,20 @@ func resourceRawsRouteTableAssociation() *schema.Resource {
 	}
 }
 
-func resourceRawsRouteTableAssociationCreate(d *schema.ResourceData, m interface{}) error {
+func resourceRawsRouteTableAssociationCreate(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	subnet_id := d.Get("subnet_id").(string)
+	route_table_id := d.Get("route_table_id").(string)
+	associateOpts := &ec2.AssociateRouteTableRequest{
+		RouteTableID: &route_table_id,
+		SubnetID:     &subnet_id,
+	}
+	resp, err := ec2conn.AssociateRouteTable(associateOpts)
+	if err != nil {
+		return err
+	}
+	d.SetId(*resp.AssociationID)
+	log.Printf("[INFO] Association ID: %s", d.Id())
 	return nil
 }
 
