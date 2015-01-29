@@ -38,6 +38,7 @@ func Provider() terraform.ResourceProvider {
 			"raws_security_group":          resourceRawsSecurityGroup(),
 			"raws_route_table":             resourceRawsRouteTable(),
 			"raws_route_table_association": resourceRawsRouteTableAssociation(),
+			"raws_internet_gateway":        resourceRawsInternetGateway(),
 		},
 		ConfigureFunc: providerConfigure,
 	}
