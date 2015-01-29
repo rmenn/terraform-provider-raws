@@ -73,7 +73,28 @@ func resourceRawsRouteTableAssociationRead(d *schema.ResourceData, meta interfac
 	return nil
 }
 
-func resourceRawsRouteTableAssociationUpdate(d *schema.ResourceData, m interface{}) error {
+func resourceRawsRouteTableAssociationUpdate(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	subnetId := d.Get("subnet_id").(string)
+	routeTableId := d.Get("route_table_id").(string)
+	AssociationId := d.Id()
+	log.Printf("[INFO] Creating route table association: %s => %s", subnetId, routeTableId)
+	ReplaceRouteOpts := &ec2.ReplaceRouteTableAssociationRequest{
+		AssociationID: &AssociationId,
+		RouteTableID:  &routeTableId,
+	}
+	resp, err := ec2conn.ReplaceRouteTableAssociation(ReplaceRouteOpts)
+	if err != nil {
+		ec2err, ok := err.(*codaws.APIError)
+		if ok && ec2err.Code == "InvalidAssociationID.NotFound" {
+			return resourceRawsRouteTableAssociationCreate(d, meta)
+		}
+		return err
+	}
+
+	d.SetId(*resp.NewAssociationID)
+	log.Printf("[INFO] Association ID: %s", d.Id())
+
 	return nil
 }
 
