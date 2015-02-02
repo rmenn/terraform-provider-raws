@@ -110,8 +110,46 @@ func resourceRawsRouteTableRead(d *schema.ResourceData, meta interface{}) error 
 	return nil
 }
 
-func resourceRawsRouteTableUpdate(d *schema.ResourceData, m interface{}) error {
-	return nil
+func resourceRawsRouteTableUpdate(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	routeId := d.Id()
+	if d.HasChange("route") {
+		o, n := d.GetChange("route")
+		ors := o.(*schema.Set).Difference(n.(*schema.Set))
+		nrs := n.(*schema.Set).Difference(o.(*schema.Set))
+		for _, route := range ors.List() {
+			m := route.(map[string]interface{})
+			DestCIDR := m["cidr_block"].(string)
+			DelRouteOpts := &ec2.DeleteRouteRequest{
+				RouteTableID:         &routeId,
+				DestinationCIDRBlock: &DestCIDR,
+			}
+			if err := ec2conn.DeleteRoute(DelRouteOpts); err != nil {
+				return err
+			}
+		}
+		routes := o.(*schema.Set).Intersection(n.(*schema.Set))
+		d.Set("route", routes)
+
+		for _, route := range nrs.List() {
+			m := route.(map[string]interface{})
+			Gateway := m["gateway_id"].(string)
+			CIDRBlock := m["cidr_block"].(string)
+			Instance := m["instance_id"].(string)
+			CreateRouteOpts := &ec2.CreateRouteRequest{
+				RouteTableID:         &routeId,
+				DestinationCIDRBlock: &CIDRBlock,
+				GatewayID:            &Gateway,
+				InstanceID:           &Instance,
+			}
+			if err := ec2conn.CreateRoute(CreateRouteOpts); err != nil {
+				return err
+			}
+			routes.Add(route)
+			d.Set("route", routes)
+		}
+	}
+	return resourceRawsRouteTableRead(d, meta)
 }
 
 func resourceRawsRouteTableDelete(d *schema.ResourceData, meta interface{}) error {
