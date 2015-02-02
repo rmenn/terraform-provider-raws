@@ -107,7 +107,7 @@ func resourceRawsRouteTableAssociationDelete(d *schema.ResourceData, meta interf
 	}
 	if err := ec2conn.DisassociateRouteTable(DisaccocRouteTableOpts); err != nil {
 		ec2err, ok := err.(*codaws.APIError)
-		if ok && ec2err.Code == "InvalidVpcID.NotFound" {
+		if ok && ec2err.Code == "InvalidAssociationID.NotFound" {
 			return nil
 		}
 

@@ -86,7 +86,52 @@ func resourceRawsRouteTableUpdate(d *schema.ResourceData, m interface{}) error {
 	return nil
 }
 
-func resourceRawsRouteTableDelete(d *schema.ResourceData, m interface{}) error {
+func resourceRawsRouteTableDelete(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	rtRaw, _, err := resourceAwsRouteTableStateRefreshFunc(ec2conn, d.Id())()
+	if err != nil {
+		return err
+	}
+	if rtRaw == nil {
+		return nil
+	}
+	rt := rtRaw.(*ec2.RouteTable)
+
+	for _, a := range rt.Associations {
+		log.Printf("[INFO] Disassociating association: %s", a.RouteTableAssociationID)
+		DisaccocRouteTableOpts := &ec2.DisassociateRouteTableRequest{
+			AssociationID: a.RouteTableAssociationID,
+		}
+		if err := ec2conn.DisassociateRouteTable(DisaccocRouteTableOpts); err != nil {
+			ec2err, ok := err.(*codaws.APIError)
+			if ok && ec2err.Code == "InvalidAssociationID.NotFound" {
+				return nil
+			}
+		}
+	}
+	routeId := d.Id()
+	log.Printf("[INFO] Deleting Route Table: %s", d.Id())
+	DelRouteOpts := &ec2.DeleteRouteTableRequest{
+		RouteTableID: &routeId,
+	}
+	if err := ec2conn.DeleteRouteTable(DelRouteOpts); err != nil {
+		ec2err, ok := err.(*codaws.APIError)
+		if ok && ec2err.Code == "InvalidRouteTableID.NotFound" {
+			return nil
+		}
+		return fmt.Errorf("Error deleting route table: %s", err)
+	}
+
+	log.Printf("[DEBUG] Waiting for route table (%s) to become destroyed", d.Id())
+	stateConf := &resource.StateChangeConf{
+		Pending: []string{"ready"},
+		Target:  "",
+		Refresh: resourceAwsRouteTableStateRefreshFunc(ec2conn, d.Id()),
+		Timeout: 1 * time.Minute,
+	}
+	if _, err := stateConf.WaitForState(); err != nil {
+		return fmt.Errorf("Error waiting for route table (%s) to become destroyed: %s", d.Id(), err)
+	}
 	return nil
 }
 
