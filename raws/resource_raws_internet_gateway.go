@@ -91,6 +91,16 @@ func resourceRawsInternetGatewayDelete(d *schema.ResourceData, meta interface{})
 		}
 		return fmt.Errorf("Error deleting internet gateway: %s", err)
 	})
+	log.Printf("[DEBUG] Waiting for internet gateway (%s) to delete", d.Id())
+	stateConf := &resource.StateChangeConf{
+		Pending: []string{"available"},
+		Target:  "",
+		Refresh: IGStateRefreshFunc(ec2conn, d.Id()),
+		Timeout: 10 * time.Minute,
+	}
+	if _, err := stateConf.WaitForState(); err != nil {
+		return fmt.Errorf("Error waiting for internet gateway (%s) to destroy: %s", d.Id(), err)
+	}
 	return nil
 }
 
