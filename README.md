@@ -8,10 +8,10 @@ Highly Untested.
 Uses [aws-go], currently supports 
 * VPC
 * Subnets
-* Route Tables ( WIP )
+* Route Tables
 * Route Table Association
 * Security Group ( Pending )
-* Internet Gateway ( Pending )
+* Internet Gateway ( WIP )
 
 Supposed to work with all operations that is supported by TF on VPC and Subnets
 ```
