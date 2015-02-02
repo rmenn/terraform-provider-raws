@@ -119,7 +119,26 @@ func resourceAwsInternetGatewayDetach(d *schema.ResourceData, meta interface{}) 
 }
 
 func IGStateRefreshFunc(ec2conn *ec2.EC2, id string) resource.StateRefreshFunc {
-	return nil
+	return func() (interface{}, string, error) {
+		DescribeIGWOpts := &ec2.DescribeInternetGatewaysRequest{
+			InternetGatewayIDs: []string{id},
+		}
+		resp, err := ec2conn.DescribeInternetGateways(DescribeIGWOpts)
+		if err != nil {
+			ec2err, ok := err.(*codaws.APIError)
+			if ok && ec2err.Code == "InvalidInternetGatewayID.NotFound" {
+				resp = nil
+			} else {
+				log.Printf("[ERROR] Error on IGStateRefresh: %s", err)
+				return nil, "", err
+			}
+		}
+		if resp == nil {
+			return nil, "", nil
+		}
+		ig := &resp.InternetGateways[0]
+		return ig, "available", nil
+	}
 }
 
 func IGAttachStateRefreshFunc(conn *ec2.EC2, id string, expected string) resource.StateRefreshFunc {
