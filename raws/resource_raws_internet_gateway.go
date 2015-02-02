@@ -42,11 +42,25 @@ func resourceRawsInternetGatewayCreate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceRawsInternetGatewayRead(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	igRaw, _, err := IGStateRefreshFunc(ec2conn, d.Id())()
+	if err != nil {
+		return err
+	}
+	if igRaw == nil {
+		d.SetId("")
+		return nil
+	}
+	ig := igRaw.(*ec2.InternetGateway)
+	d.Set("vpc_id", *ig.Attachments[0].VPCID)
 	return nil
 }
 
 func resourceRawsInternetGatewayUpdate(d *schema.ResourceData, meta interface{}) error {
-	return nil
+	if err := resourceAwsInternetGatewayDetach(d, meta); err != nil {
+		return err
+	}
+	return resourceAwsInternetGatewayAttach(d, meta)
 }
 
 func resourceRawsInternetGatewayDelete(d *schema.ResourceData, meta interface{}) error {
