@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/resource"
@@ -53,8 +54,28 @@ func resourceRawsRouteTable() *schema.Resource {
 	}
 }
 
-func resourceRawsRouteTableCreate(d *schema.ResourceData, m interface{}) error {
-	return nil
+func resourceRawsRouteTableCreate(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	vpcId := d.Get("vpc_id").(string)
+	CreateRouteOpts := &ec2.CreateRouteTableRequest{
+		VPCID: &vpcId,
+	}
+	log.Printf("[DEBUG] RouteTable create config: %#v", CreateRouteOpts)
+	resp, err := ec2conn.CreateRouteTable(CreateRouteOpts)
+	if err != nil {
+		return fmt.Errorf("Error creating route table: %s", err)
+	}
+	log.Printf("[DEBUG] Waiting for route table (%s) to become available", d.Id())
+	stateConf := &resource.StateChangeConf{
+		Pending: []string{"pending"},
+		Target:  "ready",
+		Refresh: resourceAwsRouteTableStateRefreshFunc(ec2conn, d.Id()),
+		Timeout: 1 * time.Minute,
+	}
+	if _, err := stateConf.WaitForState(); err != nil {
+		return fmt.Errorf("Error waiting for route table (%s) to become available: %s", d.Id(), err)
+	}
+	return resourceRawsRouteTableUpdate(d, meta)
 }
 
 func resourceRawsRouteTableRead(d *schema.ResourceData, m interface{}) error {
