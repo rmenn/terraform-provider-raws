@@ -78,7 +78,35 @@ func resourceRawsRouteTableCreate(d *schema.ResourceData, meta interface{}) erro
 	return resourceRawsRouteTableUpdate(d, meta)
 }
 
-func resourceRawsRouteTableRead(d *schema.ResourceData, m interface{}) error {
+func resourceRawsRouteTableRead(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	rtRaw, _, err := resourceAwsRouteTableStateRefreshFunc(ec2conn, d.Id())()
+	if err != nil {
+		return err
+	}
+	if rtRaw == nil {
+		return nil
+	}
+	rt := rtRaw.(*ec2.RouteTable)
+	d.Set("vpc_id", *rt.VPCID)
+	route := &schema.Set{F: resourceAwsRouteTableHash}
+	for _, r := range rt.Routes {
+		if *r.GatewayID == "local" {
+			continue
+		}
+		m := make(map[string]interface{})
+		m["cidr_block"] = r.DestinationCIDRBlock
+		if *r.GatewayID != "" {
+			m["gateway_id"] = *r.GatewayID
+		}
+
+		if *r.InstanceID != "" {
+			m["instance_id"] = *r.InstanceID
+		}
+		route.Add(m)
+	}
+	d.Set("route", route)
+
 	return nil
 }
 
