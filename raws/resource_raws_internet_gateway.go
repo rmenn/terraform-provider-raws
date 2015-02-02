@@ -64,6 +64,33 @@ func resourceRawsInternetGatewayUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceRawsInternetGatewayDelete(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	if err := resourceAwsInternetGatewayDetach(d, meta); err != nil {
+		return err
+	}
+	log.Printf("[INFO] Deleting Internet Gateway: %s", d.Id())
+	return resource.Retry(5*time.Minute, func() error {
+		IgId := d.Id()
+		DelIGOpts := &ec2.DeleteInternetGatewayRequest{
+			InternetGatewayID: &IgId,
+		}
+		err := ec2conn.DeleteInternetGateway(DelIGOpts)
+		if err != nil {
+			ec2err, ok := err.(*codaws.APIError)
+			if !ok {
+				return err
+			}
+			switch ec2err.Code {
+			case "InvalidInternetGatewayID.NotFound":
+				return nil
+			case "DependencyViolation":
+				return err
+			default:
+				return resource.RetryError{err}
+			}
+		}
+		return fmt.Errorf("Error deleting internet gateway: %s", err)
+	})
 	return nil
 }
 
