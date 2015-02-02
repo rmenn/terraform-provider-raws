@@ -142,5 +142,35 @@ func IGStateRefreshFunc(ec2conn *ec2.EC2, id string) resource.StateRefreshFunc {
 }
 
 func IGAttachStateRefreshFunc(conn *ec2.EC2, id string, expected string) resource.StateRefreshFunc {
+	var start time.Time
+	return func() (interface{}, string, error) {
+		if start.IsZero() {
+			start = time.Now()
+		}
+		DescribeIGWOpts := &ec2.DescribeInternetGatewaysRequest{
+			InternetGatewayIDs: []string{id},
+		}
+		resp, err := conn.DescribeInternetGateways(DescribeIGWOpts)
+		if err != nil {
+			ec2err, ok := err.(*codaws.APIError)
+			if ok && ec2err.Code == "InvalidInternetGatewayID.NotFound" {
+				resp = nil
+			} else {
+				log.Printf("[ERROR] Error on IGStateRefresh: %s", err)
+				return nil, "", err
+			}
+		}
+		if resp == nil {
+			return nil, "", nil
+		}
+		ig := &resp.InternetGateways[0]
+		if time.Now().Sub(start) > 10*time.Second {
+			return ig, expected, nil
+		}
+		if len(ig.Attachments) == 0 {
+			return ig, "detached", nil
+		}
+		return ig, *ig.Attachments[0].State, nil
+	}
 	return nil
 }
