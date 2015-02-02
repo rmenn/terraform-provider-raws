@@ -1,12 +1,10 @@
 package raws
 
 import (
+	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
-	codaws "github.com/stripe/aws-go/aws"
-	"github.com/stripe/aws-go/gen/ec2"
 )
 
 func resourceRawsInternetGateway() *schema.Resource {
@@ -27,7 +25,16 @@ func resourceRawsInternetGateway() *schema.Resource {
 }
 
 func resourceRawsInternetGatewayCreate(d *schema.ResourceData, meta interface{}) error {
-	return nil
+	ec2conn := meta.(*AWSClient).codaConn
+	log.Printf("[DEBUG] Creating internet gateway")
+	resp, err := ec2conn.CreateInternetGateway(nil)
+	if err != nil {
+		return fmt.Errorf("Error creating internet gateway: %s", err)
+	}
+	ig := resp.InternetGateway
+	d.SetId(*ig.InternetGatewayID)
+	log.Printf("[INFO] InternetGateway ID: %s", d.Id())
+	return resourceAwsInternetGatewayAttach(d, meta)
 }
 
 func resourceRawsInternetGatewayRead(d *schema.ResourceData, meta interface{}) error {
@@ -39,5 +46,9 @@ func resourceRawsInternetGatewayUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceRawsInternetGatewayDelete(d *schema.ResourceData, meta interface{}) error {
+	return nil
+}
+
+func resourceAwsInternetGatewayAttach(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
