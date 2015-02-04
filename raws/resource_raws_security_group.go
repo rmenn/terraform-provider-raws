@@ -3,12 +3,14 @@ package raws
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"sort"
 
-	"github.com/AdRoll/goamz/ec2"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
+	codaws "github.com/stripe/aws-go/aws"
+	"github.com/stripe/aws-go/gen/ec2"
 )
 
 func resourceRawsSecurityGroup() *schema.Resource {
@@ -138,5 +140,27 @@ func resourceAwsSecurityGroupIngressHash(v interface{}) int {
 }
 
 func SGStateRefreshFunc(conn *ec2.EC2, id string) resource.StateRefreshFunc {
-	return nil
+	return func() (interface{}, string, error) {
+		DescribeSgOpts := &ec2.DescribeSecurityGroupsRequest{
+			GroupIDs: []string{id},
+		}
+		resp, err := conn.DescribeSecurityGroups(DescribeSgOpts)
+		if err != nil {
+			if ec2err, ok := err.(*codaws.APIError); ok {
+				if ec2err.Code == "InvalidSecurityGroupID.NotFound" || ec2err.Code == "InvalidGroup.NotFound" {
+					resp = nil
+					err = nil
+				}
+			}
+			if err != nil {
+				log.Printf("Error on SGStateRefresh: %s", err)
+				return nil, "", err
+			}
+		}
+		if resp == nil {
+			return nil, "", nil
+		}
+		group := &resp.SecurityGroups[0]
+		return group, "exists", nil
+	}
 }
