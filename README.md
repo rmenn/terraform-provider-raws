@@ -3,12 +3,13 @@
 Wrote this up since i need to bring up infrastructure in eu-central-1 which goamz does not support due to V4 Signing. Mitchell Hashimoto mentioned that the are planning to move to aws-go, so this is a POC so i can get my Infra up and running.
 
 ###Note
-Highly Untested.
+* Highly Untested.
+* Bug Filed for [Internet Gateway]
  
 Uses [aws-go], currently supports 
 * VPC
 * Subnets
-* Route Tables
+* Route Tables ( Incomplete due to Bug )
 * Route Table Association
 * Security Group ( Pending )
 * Internet Gateway ( WIP )
@@ -33,3 +34,4 @@ resource "raws_subnet" "test" {
 }
 ```
 [aws-go]: https://github.com/stripe/aws-go
+[Internet Gateway]: https://github.com/awslabs/aws-sdk-go/issues/83
