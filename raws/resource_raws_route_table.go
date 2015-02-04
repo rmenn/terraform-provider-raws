@@ -65,6 +65,8 @@ func resourceRawsRouteTableCreate(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return fmt.Errorf("Error creating route table: %s", err)
 	}
+	rt := resp.RouteTable
+	d.SetId(*rt.RouteTableID)
 	log.Printf("[DEBUG] Waiting for route table (%s) to become available", d.Id())
 	stateConf := &resource.StateChangeConf{
 		Pending: []string{"pending"},
