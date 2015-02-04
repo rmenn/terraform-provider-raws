@@ -57,3 +57,11 @@ func expandIPPerms(id string, configured []interface{}) []ec2.IPPermission {
 
 	return perms
 }
+
+func flattenSecurityGroups(list []ec2.UserIDGroupPair) []string {
+	result := make([]string, 0, len(list))
+	for _, g := range list {
+		result = append(result, *g.GroupID)
+	}
+	return result
+}
