@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/resource"
@@ -89,8 +90,42 @@ func resourceRawsSecurityGroup() *schema.Resource {
 		},
 	}
 }
-func resourceRawsSecurityGroupCreate(d *schema.ResourceData, m interface{}) error {
-	return nil
+func resourceRawsSecurityGroupCreate(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	SgName := d.Get("name").(string)
+	var VpcId string
+	var SgDescription string
+	if v := d.Get("vpc_id"); v != nil {
+		VpcId = v.(string)
+	}
+	if v := d.Get("description"); v != nil {
+		SgDescription = v.(string)
+	}
+	CreateSgOpts := &ec2.CreateSecurityGroupRequest{
+		GroupName:   &SgName,
+		VPCID:       &VpcId,
+		Description: &SgDescription,
+	}
+	log.Printf("[DEBUG] Security Group create configuration: %#v", CreateSgOpts)
+	resp, err := ec2conn.CreateSecurityGroup(CreateSgOpts)
+	if err != nil {
+		return fmt.Errorf("Error creating Security Group: %s", err)
+	}
+	d.SetId(*resp.GroupID)
+	log.Printf("[INFO] Security Group ID: %s", d.Id())
+	log.Printf("[DEBUG] Waiting for Security Group (%s) to exist", d.Id())
+	stateConf := &resource.StateChangeConf{
+		Pending: []string{""},
+		Target:  "exists",
+		Refresh: SGStateRefreshFunc(ec2conn, d.Id()),
+		Timeout: 1 * time.Minute,
+	}
+	if _, err := stateConf.WaitForState(); err != nil {
+		return fmt.Errorf(
+			"Error waiting for Security Group (%s) to become available: %s",
+			d.Id(), err)
+	}
+	return resourceRawsSecurityGroupUpdate(d, meta)
 }
 
 func resourceRawsSecurityGroupRead(d *schema.ResourceData, m interface{}) error {
