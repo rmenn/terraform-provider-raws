@@ -136,8 +136,31 @@ func resourceRawsSecurityGroupUpdate(d *schema.ResourceData, m interface{}) erro
 	return nil
 }
 
-func resourceRawsSecurityGroupDelete(d *schema.ResourceData, m interface{}) error {
-	return nil
+func resourceRawsSecurityGroupDelete(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	log.Printf("[DEBUG] Security Group destroy: %v", d.Id())
+	return resource.Retry(5*time.Minute, func() error {
+		SgId := d.Id()
+		DelSgOpts := &ec2.DeleteSecurityGroupRequest{
+			GroupID: &SgId,
+		}
+		err := ec2conn.DeleteSecurityGroup(DelSgOpts)
+		if err != nil {
+			ec2err, ok := err.(*codaws.APIError)
+			if !ok {
+				return err
+			}
+			switch ec2err.Code {
+			case "InvalidGroup.NotFound":
+				return nil
+			case "DependencyViolation":
+				return err
+			default:
+				return resource.RetryError{err}
+			}
+		}
+		return nil
+	})
 }
 
 func resourceAwsSecurityGroupIngressHash(v interface{}) int {
