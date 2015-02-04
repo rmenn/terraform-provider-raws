@@ -1,6 +1,10 @@
 package raws
 
 import (
+	"bytes"
+	"fmt"
+	"sort"
+
 	"github.com/AdRoll/goamz/ec2"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/resource"
@@ -100,7 +104,37 @@ func resourceRawsSecurityGroupDelete(d *schema.ResourceData, m interface{}) erro
 }
 
 func resourceAwsSecurityGroupIngressHash(v interface{}) int {
-	return nil
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%d-", m["from_port"].(int)))
+	buf.WriteString(fmt.Sprintf("%d-", m["to_port"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["protocol"].(string)))
+	if v, ok := m["cidr_blocks"]; ok {
+		vs := v.([]interface{})
+		s := make([]string, len(vs))
+		for i, raw := range vs {
+			s[i] = raw.(string)
+		}
+		sort.Strings(s)
+
+		for _, v := range s {
+			buf.WriteString(fmt.Sprintf("%s-", v))
+		}
+	}
+	if v, ok := m["security_groups"]; ok {
+		vs := v.(*schema.Set).List()
+		s := make([]string, len(vs))
+		for i, raw := range vs {
+			s[i] = raw.(string)
+		}
+		sort.Strings(s)
+
+		for _, v := range s {
+			buf.WriteString(fmt.Sprintf("%s-", v))
+		}
+	}
+
+	return hashcode.String(buf.String())
 }
 
 func SGStateRefreshFunc(conn *ec2.EC2, id string) resource.StateRefreshFunc {
