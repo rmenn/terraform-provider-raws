@@ -128,7 +128,70 @@ func resourceRawsSecurityGroupCreate(d *schema.ResourceData, meta interface{}) e
 	return resourceRawsSecurityGroupUpdate(d, meta)
 }
 
-func resourceRawsSecurityGroupRead(d *schema.ResourceData, m interface{}) error {
+func resourceRawsSecurityGroupRead(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	sgRaw, _, err := SGStateRefreshFunc(ec2conn, d.Id())()
+	if err != nil {
+		return err
+	}
+	if sgRaw == nil {
+		d.SetId("")
+		return nil
+	}
+	sg := sgRaw.(*ec2.SecurityGroup)
+	ingressMap := make(map[string]map[string]interface{})
+	for _, perm := range sg.IPPermissions {
+		k := fmt.Sprintf("%s-%d-%d", perm.IPProtocol, perm.FromPort, perm.ToPort)
+		m, ok := ingressMap[k]
+		if !ok {
+			m = make(map[string]interface{})
+			ingressMap[k] = m
+		}
+		m["from_port"] = perm.FromPort
+		m["to_port"] = perm.ToPort
+		m["protocol"] = perm.IPProtocol
+		if len(perm.IPRanges) > 0 {
+			raw, ok := m["cidr_blocks"]
+			if !ok {
+				raw = make([]string, 0, len(perm.IPRanges))
+			}
+			list := raw.([]ec2.IPRange)
+			list = append(list, perm.IPRanges...)
+			m["cidr_blocks"] = list
+		}
+
+		var groups []string
+		if len(perm.UserIDGroupPairs) > 0 {
+			groups = flattenSecurityGroups(perm.UserIDGroupPairs)
+		}
+		for i, id := range groups {
+			if id == d.Id() {
+				groups[i], groups = groups[len(groups)-1], groups[:len(groups)-1]
+				m["self"] = true
+			}
+		}
+		if len(groups) > 0 {
+			raw, ok := m["security_groups"]
+			if !ok {
+				raw = make([]string, 0, len(groups))
+			}
+			list := raw.([]string)
+
+			list = append(list, groups...)
+			m["security_groups"] = list
+		}
+	}
+	ingressRules := make([]map[string]interface{}, 0, len(ingressMap))
+	for _, m := range ingressMap {
+		ingressRules = append(ingressRules, m)
+	}
+
+	d.Set("description", sg.Description)
+	d.Set("name", sg.GroupName)
+	d.Set("vpc_id", sg.VPCID)
+	d.Set("owner_id", sg.OwnerID)
+	d.Set("ingress", ingressRules)
+
 	return nil
 }
 
