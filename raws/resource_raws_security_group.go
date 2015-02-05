@@ -195,8 +195,48 @@ func resourceRawsSecurityGroupRead(d *schema.ResourceData, meta interface{}) err
 	return nil
 }
 
-func resourceRawsSecurityGroupUpdate(d *schema.ResourceData, m interface{}) error {
-	return nil
+func resourceRawsSecurityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
+	ec2conn := meta.(*AWSClient).codaConn
+	sgRaw, _, err := SGStateRefreshFunc(ec2conn, d.Id())()
+	if err != nil {
+		return err
+	}
+	if sgRaw == nil {
+		d.SetId("")
+		return nil
+	}
+	group := sgRaw.(*ec2.SecurityGroup)
+	if d.HasChange("ingress") {
+		o, n := d.GetChange("ingress")
+		if o == nil {
+			o = new(schema.Set)
+		}
+		if n == nil {
+			n = new(schema.Set)
+		}
+
+		os := o.(*schema.Set)
+		ns := n.(*schema.Set)
+
+		remove := expandIPPerms(d.Id(), os.Difference(ns).List())
+		add := expandIPPerms(d.Id(), ns.Difference(os).List())
+
+		if len(remove) > 0 {
+			RevokeSgOpts := &ec2.RevokeSecurityGroupIngressRequest{}
+			err := ec2conn.RevokeSecurityGroupIngress(RevokeSgOpts)
+			if err != nil {
+				return fmt.Errorf("Error authorizing security group ingress rules: %s", err)
+			}
+		}
+		if len(add) > 0 {
+			AddSgOpts := &ec2.AuthorizeSecurityGroupIngressRequest{}
+			err := ec2conn.AuthorizeSecurityGroupIngress(AddSgOpts)
+			if err != nil {
+				return fmt.Errorf("Error authorizing security group ingress rules: %s", err)
+			}
+		}
+	}
+	return resourceRawsSecurityGroupRead(d, meta)
 }
 
 func resourceRawsSecurityGroupDelete(d *schema.ResourceData, meta interface{}) error {
