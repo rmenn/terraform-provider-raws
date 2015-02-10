@@ -7,11 +7,11 @@ import (
 	"sort"
 	"time"
 
+	codaws "github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/gen/ec2"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
-	codaws "github.com/awslabs/aws-sdk-go/aws"
-	"github.com/awslabs/aws-sdk-go/gen/ec2"
 )
 
 func resourceRawsSecurityGroup() *schema.Resource {
@@ -205,7 +205,7 @@ func resourceRawsSecurityGroupUpdate(d *schema.ResourceData, meta interface{}) e
 		d.SetId("")
 		return nil
 	}
-	group := sgRaw.(*ec2.SecurityGroup)
+	//	group := sgRaw.(*ec2.SecurityGroup)
 	if d.HasChange("ingress") {
 		o, n := d.GetChange("ingress")
 		if o == nil {
