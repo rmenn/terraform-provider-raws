@@ -5,10 +5,10 @@ import (
 	"log"
 	"time"
 
+	"github.com/awslabs/aws-sdk-go"
+	codaws "github.com/awslabs/aws-sdk-go"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
-	codaws "github.com/stripe/aws-go/aws"
-	"github.com/stripe/aws-go/gen/ec2"
 )
 
 func resourceRawsInternetGateway() *schema.Resource {

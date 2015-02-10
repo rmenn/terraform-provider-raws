@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	codaws "github.com/stripe/aws-go/aws"
-	"github.com/stripe/aws-go/gen/ec2"
+	codaws "github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/gen/ec2"
 )
 
 func resourceRawsRouteTableAssociation() *schema.Resource {
