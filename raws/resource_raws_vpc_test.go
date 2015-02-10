@@ -1,4 +1,4 @@
-package aws
+package raws
 
 import (
 	"fmt"
