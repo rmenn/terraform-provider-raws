@@ -6,8 +6,8 @@ import (
 	"strings"
 	"unicode"
 
-	codaws "github.com/awslabs/aws-sdk-go"
-	coec2 "github.com/awslabs/aws-sdk-go"
+	codaws "github.com/awslabs/aws-sdk-go/aws"
+	coec2 "github.com/awslabs/aws-sdk-go/gen/ec2"
 	"github.com/hashicorp/terraform/helper/multierror"
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/ec2"
