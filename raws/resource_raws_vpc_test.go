@@ -1,11 +1,11 @@
 package raws
 
 import (
-	"fmt"
+	"testing"
 
+	"github.com/awslabs/aws-sdk-go/gen/ec2"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/stripe/aws-go/gen/ec2"
 )
 
 func TestAccVpc_basic(t *testing.T) {

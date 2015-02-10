@@ -3,8 +3,8 @@ package raws
 import (
 	"strings"
 
+	"github.com/awslabs/aws-sdk-go/gen/ec2"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/stripe/aws-go/gen/ec2"
 )
 
 func expandIPPerms(id string, configured []interface{}) []ec2.IPPermission {
