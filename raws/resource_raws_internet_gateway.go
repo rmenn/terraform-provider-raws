@@ -171,9 +171,6 @@ func resourceAwsInternetGatewayDetach(d *schema.ResourceData, meta interface{}) 
 
 func IGStateRefreshFunc(ec2conn *ec2.EC2, id string) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		DescribeIGWOpts := &ec2.DescribeInternetGatewaysRequest{
-			InternetGatewayIDs: []string{id},
-		}
 		resp, err := ec2conn.DescribeInternetGateways(DescribeIGWOpts)
 		if err != nil {
 			ec2err, ok := err.(*codaws.APIError)
@@ -187,7 +184,11 @@ func IGStateRefreshFunc(ec2conn *ec2.EC2, id string) resource.StateRefreshFunc {
 		if resp == nil {
 			return nil, "", nil
 		}
-		ig := &resp.InternetGateways[0]
+		for _, igw := range resp.InternetGateways {
+			if *igw.InternetGatewayID == id {
+				ig := &igw
+			}
+		}
 		return ig, "available", nil
 	}
 }
