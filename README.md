@@ -1,3 +1,4 @@
+##POC for terraform with aws-sdk-go (depricated)
 # terraform-provider-raws
 ###terraform-provider-raws
 Wrote this up since i need to bring up infrastructure in eu-central-1 which goamz does not support due to V4 Signing. Mitchell Hashimoto mentioned that the are planning to move to aws-go, so this is a POC so i can get my Infra up and running.
